@@ -1,0 +1,27 @@
+---
+- name: Clone tfenv # noqa yaml git-latest
+  git:
+    accept_hostkey: true
+    repo: https://github.com/tfutils/tfenv.git
+    dest: /root/.tfenv
+
+- name: Link tfenv executables
+  file:
+    src: "/root/.tfenv/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - "tfenv"
+    - "terraform"
+
+- name: Install Different Terraform versions # noqa yaml command-instead-of-shell no-changed-when
+  shell:
+    cmd: "tfenv install {{ item }}"
+  loop:
+    - "0.12.29"
+    - "0.13.0"
+
+- name: Uses Terraform v0.12.29 # noqa yaml command-instead-of-shell no-changed-when
+  shell:
+    cmd: tfenv use 0.12.29

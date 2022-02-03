@@ -1,0 +1,5 @@
+---
+go_version: 1.16.2
+go_path: /usr/local/go/bin
+golangci_lint_version: 1.38.0
+swarm_client_version: 3.29

@@ -1,0 +1,66 @@
+---
+- name: setting up path # noqa yaml no-changed-when
+  shell: "echo 'export PATH=/usr/local/bin:$PATH' >> /root/.bashrc"
+
+- name: write secure_path to sudoers.d file # noqa yaml risky-file-permissions
+  copy:
+    src: ./files/secure_path
+    dest: /etc/sudoers.d/secure_path
+
+- name: Replace region in redhat-rhui-client-config.repo
+  replace:
+    path: /etc/yum.repos.d/redhat-rhui-client-config.repo
+    regexp: "REGION"
+    replace: "us-east-1"
+
+- name: Replace region in redhat-rhui.repo
+  replace:
+    path: /etc/yum.repos.d/redhat-rhui.repo
+    regexp: "REGION"
+    replace: "us-east-1"
+
+- name: yum clean # noqa yaml command-instead-of-shell no-changed-when
+  shell: yum clean all
+
+- name: yum update # noqa yaml command-instead-of-module command-instead-of-shell no-changed-when
+  shell: yum update -y
+
+- name: yum install Epel release
+  yum:
+    name: epel-release
+    state: present
+
+- name: Set Up NodeJS 14 Source # noqa yaml command-instead-of-module no-changed-when risky-shell-pipe
+  shell: curl -sL https://rpm.nodesource.com/setup_14.x | bash -
+
+- name: yum install build utilities
+  yum:
+    name:
+      - git
+      - python3-pip
+      - nodejs
+      - java-1.8.0-openjdk-devel
+      - java-11-openjdk-devel
+      - python3-libselinux
+      - jq
+      - ShellCheck
+      - "@Development tools"
+    state: present
+
+- name: Ensure botocore and boto3 modules are installed (py3)
+  pip:
+    name:
+      - boto3
+      - botocore
+      - cookiecutter
+      - awscli
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Install NPM modules (Typescript)
+  npm:
+    global: true
+    name: typescript
+    production: true
+    state: present
+    version: "4.1.3"

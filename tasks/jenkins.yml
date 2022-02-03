@@ -1,0 +1,47 @@
+---
+- name: create /var/jenkins # noqa yaml risky-file-permissions
+  file:
+    path: /var/jenkins
+    state: directory
+
+- name: write agent labels file # noqa yaml risky-file-permissions
+  copy:
+    src: files/jenkins-labels
+    dest: /var/jenkins/jenkins-labels
+
+- name: write jenkins user token # noqa yaml risky-file-permissions
+  copy:
+    content: "{{ lookup('aws_ssm', 'jenkins-agent-bootstrap-user-token', region='us-east-1') }}"
+    dest: /var/jenkins/jenkins-token
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: write swarm-client.sh
+  copy:
+    src: files/swarm-client.sh
+    dest: /var/jenkins/swarm-client.sh
+    mode: "755"
+
+- name: write swarm-client-service.sh
+  copy:
+    src: files/swarm-client-service.sh
+    dest: /var/jenkins/swarm-client-service.sh
+    mode: "755"
+
+- name: write swarm-client.service # noqa yaml risky-file-permissions
+  copy:
+    src: files/swarm-client.service
+    dest: /etc/systemd/system/swarm-client.service
+
+- name: download swarm client jar
+  get_url:
+    # yamllint disable-line rule:line-length
+    url: "https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/{{ swarm_client_version }}/swarm-client-{{ swarm_client_version }}.jar" # noqa yaml
+    dest: /var/jenkins/swarm-client.jar
+    mode: 0550
+
+- name: start swarm-client
+  systemd:
+    state: started
+    name: swarm-client
+    daemon_reload: true

@@ -1,0 +1,51 @@
+- name: Remove docker if installed from CentOS repo
+  yum:
+    name:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+    state: removed
+
+- name: Enable a rhui-extras repository # noqa yaml command-instead-of-shell no-changed-when
+  shell: yum-config-manager --enable rhel-7-server-rhui-extras-rpms
+
+- name: Add Docker repo
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+
+- name: Replace 7server with 7
+  replace:
+    path: /etc/yum.repos.d/docker-ce.repo
+    regexp: '\$releasever'
+    replace: "7"
+
+- name: Install Docker # noqa yaml package-latest
+  yum:
+    name:
+      - docker-ce
+      - device-mapper-persistent-data
+      - lvm2
+    state: latest
+
+- name: create /etc/docker dir # noqa yaml risky-file-permissions
+  file:
+    path: /etc/docker
+    state: directory
+
+- name: write docker daemon.json
+  copy:
+    src: files/docker-daemon.json
+    dest: /etc/docker/daemon.json
+    mode: "755"
+
+- name: Start Docker service
+  service:
+    name: docker
+    state: started
+    enabled: true

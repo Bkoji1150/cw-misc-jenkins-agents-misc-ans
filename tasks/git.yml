@@ -1,0 +1,42 @@
+---
+- name: Enable a rhui-dotnet repository # noqa yaml command-instead-of-shell no-changed-when
+  shell: yum-config-manager --enable rhel-7-server-dotnet-rhui-rpms
+
+- name: Install endpoint Key
+  rpm_key:
+    state: present
+    key: https://packages.endpointdev.com/endpoint-rpmsign-7.pub
+
+- name: Install endpoint EPEL release repos
+  yum:
+    name:
+      - https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo-1.10-1.x86_64.rpm
+      - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    state: present
+
+- name: Remove old git installationa
+  yum:
+    name: git*
+    state: absent
+
+- name: Install Git and dotnet sdk
+  yum:
+    name:
+      - git
+      - rh-dotnet31-dotnet-sdk-3.1
+      - scl-utils
+
+- name: Install GitVersion # noqa yaml command-instead-of-shell no-changed-when
+  shell: dotnet tool install --tool-path=/usr/local/bin GitVersion.Tool
+  environment:
+    PATH: "/usr/local/bin:/opt/rh/rh-dotnet31/root/usr/bin:{{ ansible_env.PATH }}"
+    DOTNET_CLI_HOME: /root/
+  register: install_gitversion_result
+  failed_when: install_gitversion_result.rc != 0 and 'already installed' not in install_gitversion_result.stderr
+
+- name: link GitVersion binary to path
+  file:
+    src: /usr/local/bin/dotnet-gitversion
+    dest: /usr/local/bin/gitversion
+    state: link
+    force: true

@@ -1,0 +1,40 @@
+---
+- name: Download amazon-cloudwatch-agent.rpm.sig file
+  get_url:
+    url: "https://s3.amazonaws.com/amazoncloudwatch-agent/centos/amd64/latest/amazon-cloudwatch-agent.rpm.sig"
+    dest: "/tmp/amazon-cloudwatch-agent.rpm.sig"
+    timeout: "5"
+
+- name: Download amazon-cloudwatch-agent.rpm file
+  get_url:
+    url: "https://s3.amazonaws.com/amazoncloudwatch-agent/centos/amd64/latest/amazon-cloudwatch-agent.rpm"
+    dest: "/tmp/amazon-cloudwatch-agent.rpm"
+    timeout: "5"
+
+- name: Verify amazon-cloudwatch-agent package signature
+  command: gpg --verify amazon-cloudwatch-agent.rpm.sig amazon-cloudwatch-agent.rpm
+  register: verified_sig
+  failed_when: "'BAD' in verified_sig.stderr"
+  changed_when: false
+  args:
+    chdir: "/tmp"
+
+- name: Install amazon-cloudwatch-agent.rpm
+  yum:
+    name: "/tmp/amazon-cloudwatch-agent.rpm"
+    disable_gpg_check: true
+    state: present
+  register: package_ok
+  retries: "5"
+  delay: "2"
+  until: package_ok is success
+
+- name: Reload amazon-cloudwatch-agent
+  command: >-
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
+    -a fetch-config
+    -m ec2
+    -s -c ssm:"{{ cwa_config_param }}"
+  when: ansible_virtualization_type != "docker"
+  tags:
+    - reload

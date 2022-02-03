@@ -1,0 +1,22 @@
+---
+- name: cleanup existing go install
+  file:
+    path: /usr/local/go
+    state: absent
+
+- name: download and unarchive go binary artifact
+  unarchive:
+    src: "https://golang.org/dl/go{{ go_version }}.linux-amd64.tar.gz"
+    dest: /usr/local
+    remote_src: true
+
+- name: add go bin dir to system-wide $PATH. # noqa yaml risky-file-permissions
+  copy:
+    dest: /etc/profile.d/custom-path.sh
+    content: "PATH=$PATH:{{ go_path }}"
+
+# yamllint disable-line rule:line-length
+- name: install golangci-lint # noqa yaml risky-file-permissions command-instead-of-shell command-instead-of-module no-changed-when risky-shell-pipe
+  shell: >-
+    curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+    sh -s -- -b $(go env GOROOT)/bin v"{{ golangci_lint_version }}"
